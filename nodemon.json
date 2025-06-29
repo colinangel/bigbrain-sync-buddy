@@ -1,0 +1,6 @@
+{
+  "ignore": ["app-data.json", "logs/*", "*.log", "node_modules/*"],
+  "watch": ["app.js", "views/*", ".env"],
+  "ext": "js,ejs,json",
+  "verbose": false
+}

@@ -136,7 +136,8 @@ let appState = {
   syncStats: { playlists: 0, tracks: 0 },
   lastSync: null,
   syncInProgress: false,
-  logs: []
+  logs: [],
+  syncInterval: parseInt(process.env.SYNC_INTERVAL_MINUTES) || 30 // Default 30 minutes
 };
 
 // Load state from file on startup
@@ -669,8 +670,52 @@ app.get('/status', (req, res) => {
     syncInProgress: appState.syncInProgress,
     stats: appState.syncStats,
     lastSync: appState.lastSync,
-    logs: appState.logs.slice(0, 20) // Last 20 logs
+    logs: appState.logs.slice(0, 20), // Last 20 logs
+    syncInterval: appState.syncInterval || 30 // Current sync interval in minutes
   });
+});
+
+// Sync interval configuration endpoint
+app.post('/sync-interval', async (req, res) => {
+  try {
+    const { interval } = req.body;
+    
+    // Validate interval (1 minute to 24 hours = 1440 minutes)
+    if (!interval || typeof interval !== 'number' || interval < 1 || interval > 1440) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid interval. Must be between 1 minute and 24 hours (1440 minutes).'
+      });
+    }
+    
+    // Update the sync interval
+    appState.syncInterval = interval;
+    
+    // Save state
+    await saveState();
+    
+    // Restart the cron job with new interval
+    setupAutoSync();
+    
+    addLog(`Sync interval updated to ${interval} minutes`);
+    
+    res.json({
+      success: true,
+      interval: interval,
+      message: `Sync interval set to ${interval} minutes`
+    });
+    
+  } catch (error) {
+    logger.error('Error updating sync interval', { 
+      error: error.message, 
+      stack: error.stack,
+      interval: req.body.interval 
+    });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update sync interval: ' + error.message
+    });
+  }
 });
 
 // Log management endpoint
@@ -786,9 +831,24 @@ app.get('/test-tokens', async (req, res) => {
   }
 });
 
-// Auto-sync setup
-if (process.env.ENABLE_AUTO_SYNC === 'true') {
-  const syncInterval = parseInt(process.env.SYNC_INTERVAL_MINUTES) || 30;
+// Auto-sync management
+let currentCronJob = null;
+
+function setupAutoSync() {
+  // Stop existing job if any
+  if (currentCronJob) {
+    currentCronJob.stop();
+    // Note: node-cron doesn't have a destroy method
+    currentCronJob = null;
+  }
+
+  // Only setup if auto-sync is enabled
+  if (process.env.ENABLE_AUTO_SYNC !== 'true') {
+    addLog('Auto-sync is disabled');
+    return;
+  }
+
+  const syncInterval = appState.syncInterval || 30;
 
   // Create cron pattern based on interval
   let cronPattern;
@@ -801,14 +861,26 @@ if (process.env.ENABLE_AUTO_SYNC === 'true') {
     cronPattern = `0 */${hours} * * *`;
   }
 
-  cron.schedule(cronPattern, async () => {
-    if (appState.isSetup && !appState.syncInProgress) {
-      addLog('Running scheduled sync...');
-      await performSync();
-    }
-  });
-  addLog(`Auto-sync scheduled every ${syncInterval} minutes`);
+  try {
+    currentCronJob = cron.schedule(cronPattern, async () => {
+      if (appState.isSetup && !appState.syncInProgress) {
+        addLog('Running scheduled sync...');
+        await performSync();
+      }
+    }, {
+      scheduled: true,
+      timezone: "America/New_York" // You can make this configurable too
+    });
+    
+    addLog(`Auto-sync scheduled every ${syncInterval} minutes`);
+  } catch (error) {
+    logger.error('Failed to setup auto-sync', { error: error.message, interval: syncInterval });
+    addLog(`Failed to setup auto-sync: ${error.message}`, 'error');
+  }
 }
+
+// Initialize auto-sync on startup
+setupAutoSync();
 
 // Start server
 app.listen(PORT, HOST, async () => {

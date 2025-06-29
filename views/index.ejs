@@ -285,6 +285,7 @@
             from { transform: translateX(-50%) translateY(-100%); }
             to { transform: translateX(-50%) translateY(0); }
         }
+
     </style>
 </head>
 <body>
@@ -400,6 +401,29 @@
                     <% } %>
                 </div>
 
+                <!-- Sync Interval Controls -->
+                <div class="sync-interval-section" style="margin-bottom: 24px;">
+                    <h4 style="font-size: 16px; margin-bottom: 12px; opacity: 0.9;">Auto-Sync Frequency</h4>
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <select id="interval-select" style="padding: 10px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 14px; cursor: pointer; min-width: 180px;">
+                            <option value="1">1 minute</option>
+                            <option value="5">5 minutes</option>
+                            <option value="10">10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="120">2 hours</option>
+                            <option value="240">4 hours</option>
+                            <option value="480">8 hours</option>
+                            <option value="720">12 hours</option>
+                            <option value="1440">24 hours</option>
+                        </select>
+                    </div>
+                    <div id="current-interval" style="font-size: 12px; opacity: 0.7; margin-top: 8px;">
+                        Current: <span id="interval-display"><%= appState.syncInterval || 30 %> minutes</span>
+                    </div>
+                </div>
+
                 <div class="sync-buttons">
                     <button class="btn primary" id="sync-btn" <%= appState.syncInProgress ? 'disabled' : '' %>>
                         <% if (appState.syncInProgress) { %>
@@ -453,6 +477,90 @@
                 notification.remove();
             }, 4000);
         }
+        // Initialize interval controls
+        function initializeIntervalControls() {
+            const currentInterval = <%= appState.syncInterval || 30 %>;
+            const select = document.getElementById('interval-select');
+            if (select) {
+                select.value = currentInterval.toString();
+            }
+            updateIntervalDisplay(currentInterval);
+        }
+
+        // Update interval display
+        function updateIntervalDisplay(interval) {
+            const display = document.getElementById('interval-display');
+            if (display) {
+                if (interval >= 60) {
+                    const hours = interval / 60;
+                    display.textContent = hours % 1 === 0 ? `${hours} hour${hours > 1 ? 's' : ''}` : `${interval} minutes`;
+                } else {
+                    display.textContent = `${interval} minute${interval > 1 ? 's' : ''}`;
+                }
+            }
+        }
+
+        // Set sync interval
+        async function setSyncInterval(minutes) {
+            try {
+                // Disable select during update
+                const select = document.getElementById('interval-select');
+                if (select) select.disabled = true;
+
+                const response = await fetch('/sync-interval', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ interval: minutes })
+                });
+
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Server response:', text);
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    updateIntervalDisplay(minutes);
+                    showNotification(`Sync interval updated to ${minutes >= 60 ? Math.floor(minutes/60) + ' hour' + (minutes >= 120 ? 's' : '') : minutes + ' minute' + (minutes > 1 ? 's' : '')}`, 'success');
+                } else {
+                    showNotification('Failed to update sync interval: ' + result.error, 'error');
+                    // Revert select to previous value
+                    if (select) {
+                        const currentInterval = <%= appState.syncInterval || 30 %>;
+                        select.value = currentInterval.toString();
+                    }
+                }
+            } catch (error) {
+                showNotification('Error updating sync interval: ' + error.message, 'error');
+                // Revert select to previous value
+                const select = document.getElementById('interval-select');
+                if (select) {
+                    const currentInterval = <%= appState.syncInterval || 30 %>;
+                    select.value = currentInterval.toString();
+                }
+            } finally {
+                // Re-enable select
+                const select = document.getElementById('interval-select');
+                if (select) select.disabled = false;
+            }
+        }
+
+        // Interval control event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeIntervalControls();
+
+            // Auto-update interval on selection change
+            document.getElementById('interval-select')?.addEventListener('change', (e) => {
+                const minutes = parseInt(e.target.value);
+                setSyncInterval(minutes);
+            });
+        });
+
         // Auto-refresh status every 10 seconds
         setInterval(async () => {
             try {
@@ -484,6 +592,15 @@
                         statusIndicator.innerHTML = 'Setup Required';
                         statusIndicator.className = 'status-indicator';
                     }
+                }
+
+                // Update sync interval if changed externally
+                if (status.syncInterval !== undefined) {
+                    const select = document.getElementById('interval-select');
+                    if (select && select.value !== status.syncInterval.toString()) {
+                        select.value = status.syncInterval.toString();
+                    }
+                    updateIntervalDisplay(status.syncInterval);
                 }
 
                 // Refresh page if new logs appeared
