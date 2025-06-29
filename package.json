@@ -14,16 +14,23 @@
     "test": "node --check app.js"
   },
   "dependencies": {
-    "express": "^5.0.1",
-    "node-cron": "^3.0.3",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
-    "ejs": "^3.1.10"
+    "ejs": "^3.1.10",
+    "express": "^5.0.1",
+    "node-cron": "^3.0.3",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
   },
-  "keywords": ["spotify", "playlist", "sync", "music"],
+  "keywords": [
+    "spotify",
+    "playlist",
+    "sync",
+    "music"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }

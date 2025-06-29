@@ -3,42 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Playlist Sync</title>
+    <title>BigBrain Spotify Playlist Sync</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1db954, #191414);
             min-height: 100vh;
             color: white;
         }
-        
+
         .container {
             max-width: 800px;
             margin: 0 auto;
             padding: 40px 20px;
         }
-        
+
         .header {
             text-align: center;
             margin-bottom: 40px;
         }
-        
+
         .logo {
             font-size: 36px;
             font-weight: bold;
             margin-bottom: 10px;
-        }        
+        }
         .subtitle {
             font-size: 18px;
             opacity: 0.8;
         }
-        
+
         .card {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 16px;
@@ -47,47 +47,47 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .accounts-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 24px;
             margin-bottom: 24px;
         }
-        
+
         .account-card {
             text-align: center;
             padding: 20px;
         }
-        
+
         .account-title {
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 16px;
         }
-        
+
         .account-status {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             margin-bottom: 16px;
-        }        
+        }
         .status-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             background: #ff4444;
         }
-        
+
         .status-dot.connected {
             background: #1db954;
         }
-        
+
         .user-name {
             font-weight: 500;
         }
-        
+
         .btn {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -102,76 +102,76 @@
             display: inline-block;
             min-width: 140px;
         }
-        
+
         .btn:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
-        
+
         .btn.primary {
             background: #1db954;
             border-color: #1db954;
-        }        
+        }
         .btn.primary:hover {
             background: #1ed760;
         }
-        
+
         .btn.danger {
             background: #ff4444;
             border-color: #ff4444;
         }
-        
+
         .btn.danger:hover {
             background: #ff6666;
         }
-        
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
-        
+
         .sync-section {
             text-align: center;
         }
-        
+
         .sync-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 16px;
             margin-bottom: 24px;
         }
-        
+
         .stat {
             text-align: center;
         }
-        
+
         .stat-number {
             font-size: 28px;
             font-weight: bold;
             color: #1db954;
             display: block;
-        }        
+        }
         .stat-label {
             font-size: 12px;
             opacity: 0.8;
             margin-top: 4px;
         }
-        
+
         .last-sync {
             font-size: 14px;
             opacity: 0.7;
             margin-bottom: 24px;
         }
-        
+
         .sync-buttons {
             display: flex;
             gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
         }
-        
+
         .logs-section {
             max-height: 300px;
             overflow-y: auto;
@@ -179,7 +179,7 @@
             border-radius: 8px;
             padding: 16px;
         }
-        
+
         .log-entry {
             padding: 6px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -188,36 +188,36 @@
             align-items: flex-start;
             gap: 8px;
         }
-        
+
         .log-entry:last-child {
             border-bottom: none;
-        }        
+        }
         .log-time {
             color: #888;
             font-size: 11px;
             min-width: 60px;
             flex-shrink: 0;
         }
-        
+
         .log-type {
             min-width: 50px;
             font-weight: 600;
             font-size: 11px;
             flex-shrink: 0;
         }
-        
+
         .log-type.info { color: #4CAF50; }
         .log-type.warn { color: #FF9800; }
         .log-type.error { color: #F44336; }
-        
+
         .log-message {
             flex: 1;
         }
-        
+
         .hidden {
             display: none;
         }
-        
+
         .loading {
             display: inline-block;
             width: 16px;
@@ -228,22 +228,22 @@
             animation: spin 1s linear infinite;
             margin-right: 8px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }        
+        }
         @media (max-width: 600px) {
             .accounts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .sync-buttons {
                 flex-direction: column;
                 align-items: center;
             }
         }
-        
+
         .status-indicator {
             position: fixed;
             top: 20px;
@@ -255,21 +255,76 @@
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
         }
-        
+
         .status-indicator.syncing {
             background: rgba(29, 185, 84, 0.8);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+        }
+
+        .notification.success {
+            background: #1db954;
+        }
+
+        .notification.error {
+            background: #ff4444;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-100%); }
+            to { transform: translateX(-50%) translateY(0); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">🎵 Spotify Playlist Sync</div>
-            <div class="subtitle">One-way playlist synchronization</div>
+            <div class="logo">🎵 BigBrain Spotify Playlist Sync</div>
+            <% if (mode === 'incognito') { %>
+                <div class="subtitle">Connect your destination account</div>
+            <% } else { %>
+                <div class="subtitle">One-way playlist synchronization</div>
+            <% } %>
         </div>
 
-        <div class="card">
-            <div class="accounts-grid">`                <div class="account-card">
+        <% if (mode === 'incognito') { %>
+            <!-- Incognito mode - only show destination connection -->
+            <div class="card">
+                <div style="text-align: center;">
+                    <div class="account-card">
+                        <div class="account-title">Connect Your Destination Account</div>
+                        <div class="account-status">
+                            <div class="status-dot"></div>
+                            <span class="user-name">Ready to connect</span>
+                        </div>
+                        <a href="<%= authUrls.destination %>" class="btn primary">Connect to Spotify</a>
+                        
+                        <div style="margin-top: 20px; padding: 16px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 14px; line-height: 1.5;">
+                            <strong>Instructions:</strong><br>
+                            1. Click the button above to connect to Spotify<br>
+                            2. Login with your <strong>destination</strong> account<br>
+                            3. After successful connection, you can close this window<br>
+                            4. Return to the main window to start syncing
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } else { %>
+            <!-- Normal mode - full interface -->
+            <div class="card">
+            <div class="accounts-grid">
+                <div class="account-card">
                     <div class="account-title">Source Account</div>
                     <div class="account-status">
                         <div class="status-dot <%= appState.sourceToken ? 'connected' : '' %>"></div>
@@ -281,6 +336,8 @@
                         <a href="<%= authUrls.source %>" class="btn">Connect Source</a>
                     <% } else { %>
                         <div class="btn" style="opacity: 0.7;">✓ Connected</div>
+                        <br><br>
+                        <a href="<%= authUrls.source %>" class="btn" style="font-size: 11px; padding: 6px 12px;">Switch Account</a>
                     <% } %>
                 </div>
 
@@ -293,9 +350,19 @@
                         </span>
                     </div>
                     <% if (!appState.destToken) { %>
-                        <a href="<%= authUrls.destination %>" class="btn">Connect Destination</a>
+                        <div style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 12px; line-height: 1.4;">
+                            <strong>💡 To connect a different account:</strong><br>
+                            Open this URL in an incognito window:<br>
+                            <div style="margin: 8px 0; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; font-family: monospace; word-break: break-all; font-size: 11px;">
+                                <%= appUrl %>?mode=incognito
+                            </div>
+                            Then return here after connecting.
+                        </div>
                     <% } else { %>
                         <div class="btn" style="opacity: 0.7;">✓ Connected</div>
+                        <div style="margin-top: 12px; font-size: 11px; opacity: 0.7;">
+                            To switch accounts, use incognito mode with the URL above
+                        </div>
                     <% } %>
                 </div>
             </div>
@@ -304,7 +371,8 @@
         <% if (appState.isSetup) { %>
         <div class="card">
             <div class="sync-section">
-                <div class="sync-stats">`                    <div class="stat">
+                <div class="sync-stats">
+                    <div class="stat">
                         <span class="stat-number"><%= appState.syncStats.playlists || 0 %></span>
                         <div class="stat-label">Playlists Synced</div>
                     </div>
@@ -344,7 +412,8 @@
                 </div>
             </div>
         </div>
-        <% } %>`
+        <% } %>
+
         <% if (appState.logs && appState.logs.length > 0) { %>
         <div class="card">
             <h3 style="margin-bottom: 16px; font-size: 18px;">Activity Log</h3>
@@ -360,6 +429,7 @@
         </div>
         <% } %>
     </div>
+    <% } %>
 
     <div class="status-indicator <%= appState.syncInProgress ? 'syncing' : '' %>" id="status-indicator">
         <% if (appState.syncInProgress) { %>
@@ -372,12 +442,23 @@
     </div>
 
     <script>
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 4000);
+        }
         // Auto-refresh status every 10 seconds
         setInterval(async () => {
             try {
                 const response = await fetch('/status');
                 const status = await response.json();
-                
+
                 // Update sync button
                 const syncBtn = document.getElementById('sync-btn');
                 if (syncBtn) {
@@ -388,7 +469,8 @@
                         syncBtn.innerHTML = 'Sync Now';
                         syncBtn.disabled = false;
                     }
-                }`                
+                }
+
                 // Update status indicator
                 const statusIndicator = document.getElementById('status-indicator');
                 if (statusIndicator) {
@@ -403,13 +485,13 @@
                         statusIndicator.className = 'status-indicator';
                     }
                 }
-                
+
                 // Refresh page if new logs appeared
-                if (status.logs && status.logs.length > 0 && 
+                if (status.logs && status.logs.length > 0 &&
                     status.logs[0].timestamp !== '<%= appState.logs[0]?.timestamp %>') {
                     location.reload();
                 }
-                
+
             } catch (error) {
                 console.error('Status update failed:', error);
             }
@@ -417,19 +499,59 @@
 
         // Sync button handler
         document.getElementById('sync-btn')?.addEventListener('click', async () => {
+            const syncBtn = document.getElementById('sync-btn');
+            const originalText = syncBtn.innerHTML;
+
             try {
-                const response = await fetch('/sync', { method: 'POST' });
+                // Update button state
+                syncBtn.innerHTML = '<span class="loading"></span>Syncing...';
+                syncBtn.disabled = true;
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
+                const response = await fetch('/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
-                
+                console.log('Sync result:', result);
+
                 if (result.success) {
-                    setTimeout(() => location.reload(), 1000);
+                    // Show success message briefly before reload
+                    syncBtn.innerHTML = '✅ Sync Complete!';
+                    syncBtn.style.background = '#1db954';
+                    setTimeout(() => location.reload(), 2000);
                 } else {
-                    alert('Sync failed: ' + result.error);
+                    throw new Error(result.error || 'Sync failed');
                 }
             } catch (error) {
-                alert('Sync failed: ' + error.message);
+                console.error('Sync request failed:', error);
+
+                // Reset button
+                syncBtn.innerHTML = originalText;
+                syncBtn.disabled = false;
+                syncBtn.style.background = '';
+
+                if (error.name === 'AbortError') {
+                    showNotification('Sync is taking longer than expected. Check the activity log for progress.', 'error');
+                } else {
+                    showNotification('Sync failed: ' + error.message, 'error');
+                }
             }
-        });`
+        });
+
         // Disconnect button handler
         document.getElementById('disconnect-btn')?.addEventListener('click', async () => {
             if (confirm('This will disconnect all accounts and stop syncing. Continue?')) {

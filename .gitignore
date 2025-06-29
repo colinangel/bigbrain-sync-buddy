@@ -7,6 +7,13 @@ yarn-error.log*
 # Environment variables
 .env
 
+# App data (contains tokens)
+app-data.json
+
+# Log files
+logs/
+*.log
+
 # Logs
 logs/
 *.log

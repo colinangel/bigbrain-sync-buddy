@@ -8,8 +8,9 @@ A Node.js web application that automatically syncs playlists from one Spotify ac
 - ✅ **Node.js 20.x LTS** (Active LTS - Recommended)
 - ✅ **Node.js 22.x** (Current - Supported)
 - ✅ **Node.js 24.x** (Future releases - Supported)
-- ❌ Node.js 18.x (End of Life April 2025)
-- ❌ Node.js 16.x (End of Life September 2023)
+- ⚠️ **Node.js 18.x** (Minimum supported - upgrade recommended)
+- ⚠️ **Node.js 16.x** (Minimum supported - upgrade recommended)
+- ❌ Node.js 14.x and below (Not supported)
 
 ### **Dependency Versions (Latest)**
 - **Express 5.0.1** - Latest major version with performance improvements
@@ -17,6 +18,8 @@ A Node.js web application that automatically syncs playlists from one Spotify ac
 - **node-cron 3.0.3** - Current stable
 - **dotenv 16.4.7** - Latest with Node 20+ optimizations
 - **ejs 3.1.10** - Current stable template engine
+- **winston 3.17.0** - Professional logging solution
+- **winston-daily-rotate-file 5.0.0** - Log rotation and management
 
 ### **Why These Versions?**
 - **Security**: Latest patches for known vulnerabilities
@@ -40,7 +43,7 @@ A Node.js web application that automatically syncs playlists from one Spotify ac
 ### 1. Prerequisites
 
 #### **All Platforms**
-- Node.js 20+ (LTS) installed
+- Node.js 16+ installed (20+ LTS recommended)
 - npm 10+ installed (comes with Node.js)
 - Spotify Premium account (recommended for both accounts)
 - Spotify Developer App credentials
@@ -82,7 +85,7 @@ scoop install nodejs-lts
 #### **macOS Installation**
 
 ```bash
-# Check Node.js version (requires 20+)
+# Check Node.js version (requires 16+, 20+ recommended)
 node --version
 
 # Check npm version (requires 10+)
@@ -109,7 +112,7 @@ code .env
 ```bash
 # Open Command Prompt or PowerShell as Administrator
 
-# Check Node.js version (requires 20+)
+# Check Node.js version (requires 16+, 20+ recommended)
 node --version
 
 # Check npm version (requires 10+)
@@ -176,6 +179,32 @@ npm run dev
 3. Connect your **Destination** Spotify account
 4. Click "Sync Now" to start initial sync
 
+## 📋 **Logging & Monitoring**
+
+### **File-Based Logging**
+- **Location**: `logs/` directory
+- **Rotation**: Daily rotation with date stamps
+- **Compression**: Automatic gzip compression of old logs
+- **Retention**: 30 days for combined logs, 14 days for errors
+- **Max Size**: 20MB per log file before rotation
+
+### **Log Types**
+- **`combined-YYYY-MM-DD.log`** - All application logs
+- **`error-YYYY-MM-DD.log`** - Error logs only
+- **`exceptions-YYYY-MM-DD.log`** - Uncaught exceptions
+- **`rejections-YYYY-MM-DD.log`** - Unhandled promise rejections
+
+### **Log Levels**
+```bash
+# In .env file
+LOG_LEVEL=info  # error, warn, info, debug
+```
+
+### **Viewing Logs**
+- **API**: `GET /logs` - List all log files
+- **Download**: `GET /logs/combined-2024-01-01.log` - Download specific log
+- **Console**: Real-time logs in terminal during development
+
 ## 📖 How It Works
 
 ### Sync Process
@@ -203,6 +232,7 @@ npm run dev
 | `SPOTIFY_CLIENT_SECRET` | - | Your Spotify app client secret |
 | `SPOTIFY_REDIRECT_URI` | `http://127.0.0.1:3000/callback` | OAuth redirect URI |
 | `PORT` | `3000` | Server port |
+| `LOG_LEVEL` | `info` | Logging level (error/warn/info/debug) |
 | `SYNC_INTERVAL_MINUTES` | `30` | Auto-sync frequency |
 | `ENABLE_AUTO_SYNC` | `true` | Enable scheduled syncing |
 
@@ -217,6 +247,8 @@ The app automatically syncs every 30 minutes by default. You can change this by:
 - `POST /sync` - Trigger manual sync
 - `POST /disconnect` - Disconnect all accounts
 - `GET /status` - Get current sync status (JSON)
+- `GET /logs` - List available log files
+- `GET /logs/:filename` - Download specific log file
 
 ## 📱 Usage Tips
 
@@ -252,18 +284,22 @@ For production use:
 
 ```
 bigbrain-sync-buddy/
-├── app.js              # Main application server
-├── package.json        # Dependencies and scripts
-├── .env.example        # Environment template
-├── .vscode/            # VS Code configuration
-│   ├── launch.json     # Debug configurations
-│   ├── settings.json   # Workspace settings
-│   ├── tasks.json      # Build tasks
-│   └── extensions.json # Recommended extensions
-├── views/
-│   ├── index.ejs       # Main dashboard
-│   └── error.ejs       # Error page
-└── README.md          # This file
+├── app.js                      # Main application server
+├── package.json                # Dependencies and scripts
+├── package-lock.json           # Dependency lock file
+├── .env.example                # Environment template
+├── CLAUDE.md                   # Project documentation for Claude Code
+├── app-data.json               # Runtime data storage
+├── logs/                       # Application logs directory
+│   ├── combined-YYYY-MM-DD.log # Combined application logs
+│   ├── error-YYYY-MM-DD.log    # Error logs only
+│   ├── exceptions-YYYY-MM-DD.log # Uncaught exceptions
+│   └── rejections-YYYY-MM-DD.log # Unhandled promise rejections
+├── views/                      # EJS templates
+│   ├── index.ejs              # Main dashboard
+│   ├── auth-success.ejs       # OAuth success page
+│   └── error.ejs              # Error page
+└── README.md                  # This file
 ```
 
 ## 🤝 Contributing
