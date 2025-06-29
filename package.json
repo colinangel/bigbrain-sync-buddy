@@ -1,0 +1,29 @@
+{
+  "name": "bigbrain-sync-buddy",
+  "version": "1.0.0",
+  "description": "Sync Spotify playlists from one account to another",
+  "main": "app.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "prestart": "node --version && npm --version",
+    "test": "node --check app.js"
+  },
+  "dependencies": {
+    "express": "^5.0.1",
+    "node-cron": "^3.0.3",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "keywords": ["spotify", "playlist", "sync", "music"],
+  "author": "Your Name",
+  "license": "MIT"
+}
