@@ -115,6 +115,8 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
+const BASE_URL = process.env.BASE_URL || `http://${HOST}:${PORT}`;
 
 // Storage file path
 const STORAGE_FILE = path.join(__dirname, 'app-data.json');
@@ -180,7 +182,7 @@ async function saveState() {
 const SPOTIFY_CONFIG = {
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-  redirectUri: process.env.SPOTIFY_REDIRECT_URI,
+  redirectUri: process.env.SPOTIFY_REDIRECT_URI || `${BASE_URL}/callback`,
   scopes: [
     'playlist-read-private',
     'playlist-read-collaborative',
@@ -809,7 +811,8 @@ if (process.env.ENABLE_AUTO_SYNC === 'true') {
 }
 
 // Start server
-app.listen(PORT, '127.0.0.1', async () => {
+app.listen(PORT, HOST, async () => {
   await loadState(); // Load saved state on startup
-  addLog(`BigBrain Spotify Playlist Sync server running on http://127.0.0.1:${PORT}`);
+  addLog(`BigBrain Spotify Playlist Sync server running on ${BASE_URL}`);
+  addLog(`Spotify callback URL configured as: ${SPOTIFY_CONFIG.redirectUri}`);
 });
