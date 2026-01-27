@@ -40,15 +40,15 @@ graph TD
 
 ### Core Components
 
-1. **OAuth Flow** (app.js:182-264): Handles Spotify authentication with token refresh for both accounts
-2. **Sync Engine** (app.js:329-407): One-way playlist synchronization with duplicate prevention
-3. **State Management** (app.js:120-168): In-memory state with JSON file persistence (`app-data.json`)
-4. **Logging** (app.js:26-98): Winston-based logging with daily rotation to `logs/` directory
+1. **OAuth Flow** (app.js:202-271): Handles Spotify authentication with token exchange and automatic refresh
+2. **Sync Engine** (app.js:346-434): One-way playlist synchronization with duplicate prevention and track removal
+3. **State Management** (app.js:124-175): In-memory state with JSON file persistence (`app-data.json`)
+4. **Logging** (app.js:28-101): Winston-based logging with daily rotation to `logs/` directory
 5. **Web Interface** (views/): EJS templates for dashboard UI
 
 ### Key Design Decisions
 
-- **No Database**: All state is in-memory and resets on restart
+- **No Database**: State is in-memory with file persistence (survives restarts via `app-data.json`)
 - **One-Way Sync**: Source account playlists are never modified
 - **Automatic Discovery**: Syncs all user-owned playlists without manual selection
 - **Local-Only by Default**: Binds to 127.0.0.1 for security (configurable via HOST)
@@ -93,7 +93,7 @@ powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git log --oneline -5"
 
 ## Development Notes
 
-- Node.js 20+ LTS required (validated on startup, exits if <16)
+- Node.js 20+ LTS required per package.json (startup exits if <16, warns at 16-19)
 - Uses Express 5.0.1 (latest major version)
 - No test framework configured - `npm test` only does syntax checking
 - Logs written to `logs/` directory with daily rotation (Winston)
@@ -105,6 +105,7 @@ powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git log --oneline -5"
 - `GET /callback` - Spotify OAuth callback (state param determines account type)
 - `POST /sync` - Manual sync trigger
 - `POST /disconnect` - Clear all stored tokens and reset state
+- `POST /sync-interval` - Update sync interval (body: `{ interval: minutes }`, range 1-1440)
 - `GET /status` - JSON status for UI polling
 - `GET /logs` - List available log files
 - `GET /logs/:filename` - Download specific log file
