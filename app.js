@@ -127,7 +127,7 @@ let appState = {
   sourceUser: null,
   destUser: null,
   isSetup: false,
-  syncStats: { playlists: 0, tracks: 0, newPlaylists: 0, newTracks: 0 },
+  syncStats: { playlists: 0, tracks: 0, newPlaylists: 0, newTracks: 0, removedTracks: 0 },
   lastSync: null,
   syncInProgress: false,
   logs: []
@@ -326,6 +326,16 @@ async function addTracksToPlaylist(token, playlistId, trackUris) {
   }
 }
 
+async function removeTracksFromPlaylist(token, playlistId, trackUris) {
+  const chunkSize = 100;
+  for (let i = 0; i < trackUris.length; i += chunkSize) {
+    const chunk = trackUris.slice(i, i + chunkSize);
+    const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+    await makeSpotifyRequest(url, token, 'DELETE', { tracks: chunk.map(uri => ({ uri })) });
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+
 async function performSync() {
   if (appState.syncInProgress) {
     addLog('Sync already in progress, skipping...', 'warn');
@@ -356,7 +366,7 @@ async function performSync() {
 
     const destPlaylistMap = new Map(destPlaylists.map(p => [p.name.trim().toLowerCase(), p]));
 
-    let totalTracks = 0, syncedPlaylists = 0, newPlaylists = 0, newTracks = 0;
+    let totalTracks = 0, syncedPlaylists = 0, newPlaylists = 0, newTracks = 0, removedTracks = 0;
 
     for (const sourcePlaylist of sourcePlaylists) {
       try {
@@ -377,12 +387,22 @@ async function performSync() {
 
         const currentTracks = await fetchPlaylistTracks(appState.destToken, destPlaylist.id);
         const currentTrackUris = new Set(currentTracks.map(t => t.track.uri));
-        const tracksToAdd = tracks.filter(t => !currentTrackUris.has(t.track.uri));
+        const sourceTrackUris = new Set(tracks.map(t => t.track.uri));
 
+        // Add tracks that are in source but not in destination
+        const tracksToAdd = tracks.filter(t => !currentTrackUris.has(t.track.uri));
         if (tracksToAdd.length > 0) {
           await addTracksToPlaylist(appState.destToken, destPlaylist.id, tracksToAdd.map(t => t.track.uri));
           addLog(`Added ${tracksToAdd.length} tracks to ${sourcePlaylist.name}`);
           newTracks += tracksToAdd.length;
+        }
+
+        // Remove tracks that are in destination but not in source
+        const tracksToRemove = currentTracks.filter(t => !sourceTrackUris.has(t.track.uri));
+        if (tracksToRemove.length > 0) {
+          await removeTracksFromPlaylist(appState.destToken, destPlaylist.id, tracksToRemove.map(t => t.track.uri));
+          addLog(`Removed ${tracksToRemove.length} tracks from ${sourcePlaylist.name}`);
+          removedTracks += tracksToRemove.length;
         }
 
         totalTracks += tracks.length;
@@ -392,11 +412,11 @@ async function performSync() {
       }
     }
 
-    appState.syncStats = { playlists: syncedPlaylists, tracks: totalTracks, newPlaylists, newTracks };
+    appState.syncStats = { playlists: syncedPlaylists, tracks: totalTracks, newPlaylists, newTracks, removedTracks };
     appState.lastSync = new Date().toISOString();
     await saveState();
 
-    addLog(`Sync completed: ${syncedPlaylists} playlists, ${totalTracks} tracks, ${newTracks} new tracks added`);
+    addLog(`Sync completed: ${syncedPlaylists} playlists, ${totalTracks} tracks, ${newTracks} added, ${removedTracks} removed`);
     return { success: true, stats: appState.syncStats };
   } catch (error) {
     addLog(`Sync failed: ${error.message}`, 'error');
@@ -493,7 +513,7 @@ app.post('/disconnect', async (req, res) => {
     sourceUser: null,
     destUser: null,
     isSetup: false,
-    syncStats: { playlists: 0, tracks: 0, newPlaylists: 0, newTracks: 0 },
+    syncStats: { playlists: 0, tracks: 0, newPlaylists: 0, newTracks: 0, removedTracks: 0 },
     lastSync: null,
     syncInProgress: false,
     logs: []
