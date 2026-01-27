@@ -134,8 +134,11 @@ let appState = {
   syncStats: { playlists: 0, tracks: 0, newPlaylists: 0, newTracks: 0, removedTracks: 0 },
   lastSync: null,
   syncInProgress: false,
+  syncInterval: parseInt(process.env.SYNC_INTERVAL_MINUTES, 10) || 30,
   logs: []
 };
+
+let scheduledSyncTask = null;
 
 async function loadState() {
   try {
@@ -528,6 +531,49 @@ app.post('/disconnect', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/sync-interval', async (req, res) => {
+  try {
+    const { interval } = req.body;
+    const minutes = parseInt(interval, 10);
+
+    if (isNaN(minutes) || minutes < 1 || minutes > 1440) {
+      return res.status(400).json({ success: false, error: 'Invalid interval (1-1440 minutes)' });
+    }
+
+    appState.syncInterval = minutes;
+    await saveState();
+
+    // Reschedule cron if auto-sync is enabled
+    if (process.env.ENABLE_AUTO_SYNC === 'true') {
+      if (scheduledSyncTask) {
+        scheduledSyncTask.stop();
+      }
+
+      let cronPattern;
+      if (minutes <= 60) {
+        cronPattern = `*/${minutes} * * * *`;
+      } else {
+        const hours = Math.floor(minutes / 60);
+        cronPattern = `0 */${hours} * * *`;
+      }
+
+      scheduledSyncTask = cron.schedule(cronPattern, async () => {
+        if (appState.isSetup && !appState.syncInProgress) {
+          addLog('Running scheduled sync...');
+          await performSync();
+        }
+      });
+
+      addLog(`Sync interval updated to ${minutes} minutes`);
+    }
+
+    res.json({ success: true, interval: minutes });
+  } catch (error) {
+    logger.error('Error updating sync interval', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/status', (req, res) => {
   res.json({
     isSetup: appState.isSetup,
@@ -536,6 +582,7 @@ app.get('/status', (req, res) => {
     syncInProgress: appState.syncInProgress,
     stats: appState.syncStats,
     lastSync: appState.lastSync,
+    syncInterval: appState.syncInterval,
     logs: appState.logs.slice(0, 20)
   });
 });
@@ -623,7 +670,7 @@ app.get('/test-tokens', async (req, res) => {
 
 // Auto sync setup
 if (process.env.ENABLE_AUTO_SYNC === 'true') {
-  const syncInterval = parseInt(process.env.SYNC_INTERVAL_MINUTES, 10) || 30;
+  const syncInterval = appState.syncInterval;
   let cronPattern;
   if (syncInterval <= 60) {
     cronPattern = `*/${syncInterval} * * * *`;
@@ -632,7 +679,7 @@ if (process.env.ENABLE_AUTO_SYNC === 'true') {
     cronPattern = `0 */${hours} * * *`;
   }
 
-  cron.schedule(cronPattern, async () => {
+  scheduledSyncTask = cron.schedule(cronPattern, async () => {
     if (appState.isSetup && !appState.syncInProgress) {
       addLog('Running scheduled sync...');
       await performSync();
