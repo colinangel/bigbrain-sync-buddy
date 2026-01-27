@@ -119,6 +119,7 @@ app.use(express.static('public'));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 let appState = {
   sourceToken: null,
@@ -641,7 +642,7 @@ if (process.env.ENABLE_AUTO_SYNC === 'true') {
   addLog(`Auto-sync scheduled every ${syncInterval} minutes`);
 }
 
-app.listen(PORT, '127.0.0.1', async () => {
+app.listen(PORT, HOST, async () => {
   await loadState();
-  addLog(`BigBrain Spotify Playlist Sync server running on http://127.0.0.1:${PORT}`);
+  addLog(`BigBrain Spotify Playlist Sync server running on http://${HOST}:${PORT}`);
 });
