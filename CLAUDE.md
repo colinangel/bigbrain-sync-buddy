@@ -51,7 +51,7 @@ graph TD
 - **No Database**: All state is in-memory and resets on restart
 - **One-Way Sync**: Source account playlists are never modified
 - **Automatic Discovery**: Syncs all user-owned playlists without manual selection
-- **Local-Only**: Binds to 127.0.0.1 for security
+- **Local-Only by Default**: Binds to 127.0.0.1 for security (configurable via HOST)
 
 ## Environment Configuration
 
@@ -61,6 +61,7 @@ Required `.env` variables:
 - `SPOTIFY_REDIRECT_URI` - Must match Spotify app config (default: `http://127.0.0.1:3000/callback`)
 
 Optional `.env` variables:
+- `HOST` (default: 127.0.0.1) - Set to `0.0.0.0` for network access
 - `PORT` (default: 3000)
 - `LOG_LEVEL` (default: info) - error, warn, info, debug
 - `SYNC_INTERVAL_MINUTES` (default: 30)
