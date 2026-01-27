@@ -286,6 +286,14 @@
             to { transform: translateX(-50%) translateY(0); }
         }
 
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
     </style>
 </head>
 <body>
@@ -458,6 +466,8 @@
         <% } %>
     </div>
     <% } %>
+
+    <div class="footer">v<%= version %></div>
 
     <div class="status-indicator <%= appState.syncInProgress ? 'syncing' : '' %>" id="status-indicator">
         <% if (appState.syncInProgress) { %>

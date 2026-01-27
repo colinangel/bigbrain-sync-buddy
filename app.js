@@ -9,6 +9,9 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 require('dotenv').config();
 
+// Load app version from package.json
+const { version: APP_VERSION } = require('./package.json');
+
 // Validate Node.js version
 const nodeVersion = process.version;
 const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
@@ -439,6 +442,7 @@ app.get('/', (req, res) => {
     },
     mode: mode || 'normal',
     appUrl,
+    version: APP_VERSION,
   });
 });
 
