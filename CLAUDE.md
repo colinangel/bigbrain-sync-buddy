@@ -40,10 +40,11 @@ graph TD
 
 ### Core Components
 
-1. **OAuth Flow** (app.js:45-130): Handles Spotify authentication for both source and destination accounts
-2. **Sync Engine** (app.js:205-338): One-way playlist synchronization logic with duplicate prevention
-3. **State Management** (app.js:19-26): In-memory storage for tokens and sync state
-4. **Web Interface** (views/): EJS templates for dashboard UI
+1. **OAuth Flow** (app.js:182-264): Handles Spotify authentication with token refresh for both accounts
+2. **Sync Engine** (app.js:329-407): One-way playlist synchronization with duplicate prevention
+3. **State Management** (app.js:120-168): In-memory state with JSON file persistence (`app-data.json`)
+4. **Logging** (app.js:26-98): Winston-based logging with daily rotation to `logs/` directory
+5. **Web Interface** (views/): EJS templates for dashboard UI
 
 ### Key Design Decisions
 
@@ -57,22 +58,54 @@ graph TD
 Required `.env` variables:
 - `SPOTIFY_CLIENT_ID` - From Spotify app dashboard
 - `SPOTIFY_CLIENT_SECRET` - From Spotify app dashboard
-- `PORT` (optional, default: 3000)
+- `SPOTIFY_REDIRECT_URI` - Must match Spotify app config (default: `http://127.0.0.1:3000/callback`)
 
-Redirect URI must be: `http://localhost:3000/callback`
+Optional `.env` variables:
+- `PORT` (default: 3000)
+- `LOG_LEVEL` (default: info) - error, warn, info, debug
+- `SYNC_INTERVAL_MINUTES` (default: 30)
+- `ENABLE_AUTO_SYNC` (default: false) - Set to `true` for scheduled syncing
+
+## Git Commands (Windows/PowerShell)
+
+This project runs on Windows. Use PowerShell for all git operations:
+
+```powershell
+# Check status
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git status"
+
+# View changes
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git diff"
+
+# Stage specific files
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git add app.js views/index.ejs"
+
+# Commit with message
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git commit -m 'Your commit message'"
+
+# Push to remote
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git push"
+
+# View recent commits
+powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git log --oneline -5"
+```
 
 ## Development Notes
 
-- Node.js 20+ LTS required (validated on startup)
+- Node.js 20+ LTS required (validated on startup, exits if <16)
 - Uses Express 5.0.1 (latest major version)
-- No test framework configured - only syntax checking
-- Auto-formatting configured for VS Code
-- Default sync interval: 30 minutes (configurable via cron expression)
+- No test framework configured - `npm test` only does syntax checking
+- Logs written to `logs/` directory with daily rotation (Winston)
+- State persisted to `app-data.json` (reloaded on startup)
 
 ## API Reference
 
 - `GET /` - Dashboard UI
-- `GET /callback?account={source|destination}` - OAuth callback
+- `GET /callback` - Spotify OAuth callback (state param determines account type)
 - `POST /sync` - Manual sync trigger
-- `POST /disconnect` - Clear all stored tokens
+- `POST /disconnect` - Clear all stored tokens and reset state
 - `GET /status` - JSON status for UI polling
+- `GET /logs` - List available log files
+- `GET /logs/:filename` - Download specific log file
+- `GET /debug` - Token status debugging info
+- `GET /test-tokens` - Validate stored tokens against Spotify API
