@@ -2,7 +2,22 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(npm test)",
+      "Bash(cmd /c \"npm test\")",
+      "Bash(cmd /c \"cd /d C:\\\\bigbrain\\\\bigbrain-sync-buddy && node --check app.js\")",
+      "Bash(cd:*)",
+      "Bash(cmd /c \"cd /d C:\\\\bigbrain\\\\bigbrain-sync-buddy && git status\")",
+      "Bash(cmd /c \"cd /d C:\\\\bigbrain\\\\bigbrain-sync-buddy && git diff\")",
+      "Bash(cmd /c \"cd /d C:\\\\bigbrain\\\\bigbrain-sync-buddy && git log --oneline -5\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git status\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git diff\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git log --oneline -5\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git add app.js views/index.ejs\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git push\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; npm test\")",
+      "Bash(powershell -Command \"node --check ''C:\\\\bigbrain\\\\bigbrain-sync-buddy\\\\app.js''\")",
+      "Bash(powershell -Command \"cd ''C:\\\\bigbrain\\\\bigbrain-sync-buddy''; git commit -m ''docs: fix line numbers and clarify state persistence in CLAUDE.md'' -m ''Update component line references to match current app.js. Correct state management description \\(persists via app-data.json\\). Add missing POST /sync-interval endpoint to API reference. Clarify Node.js version validation behavior.'' -m ''Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>''\")"
     ],
     "deny": []
   }
