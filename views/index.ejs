@@ -727,9 +727,14 @@
                 console.log("Ron's Radio result:", result);
 
                 if (result.success) {
-                    btn.innerHTML = "✅ Ron's Radio Built!";
+                    btn.innerHTML = "✅ Ron's Radio Updated!";
                     btn.style.background = '#1db954';
-                    showNotification(`Ron's Radio created with ${result.stats.finalTrackCount} tracks from ${result.stats.playlistsProcessed} playlists!`, 'success');
+                    const stats = result.stats;
+                    let msg = `Ron's Radio: ${stats.finalTrackCount} tracks`;
+                    if (stats.tracksAdded > 0 || stats.tracksRemoved > 0) {
+                        msg += ` (${stats.tracksAdded} added, ${stats.tracksRemoved} removed)`;
+                    }
+                    showNotification(msg, 'success');
                     setTimeout(() => location.reload(), 3000);
                 } else {
                     throw new Error(result.error || "Failed to build Ron's Radio");
