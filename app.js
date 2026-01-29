@@ -364,24 +364,34 @@ function artistMatchesSelectedGenres(artist, selectedGenres) {
   );
 }
 
-// Normalize genre names for grouping (e.g., "album rock" and "classic rock" both contain "rock")
-function normalizeGenre(genre) {
-  return genre.toLowerCase().trim();
-}
+// Primary genre categories for consolidation
+const GENRE_CATEGORIES = [
+  'rock', 'pop', 'hip hop', 'rap', 'r&b', 'soul', 'jazz', 'blues', 'country',
+  'electronic', 'edm', 'dance', 'house', 'techno', 'metal', 'punk', 'indie',
+  'folk', 'classical', 'reggae', 'latin', 'world', 'americana', 'alternative',
+  'disco', 'funk', 'gospel', 'christian', 'new wave', 'grunge', 'emo',
+  'ska', 'swing', 'motown', 'soundtrack', 'acoustic', 'singer-songwriter'
+];
 
 // Get primary genre category from a genre string
 function getPrimaryGenreCategory(genre) {
-  const normalized = normalizeGenre(genre);
-  // Common genre keywords to group by
-  const categories = [
-    'rock', 'pop', 'hip hop', 'rap', 'r&b', 'soul', 'jazz', 'blues', 'country',
-    'electronic', 'dance', 'house', 'techno', 'metal', 'punk', 'indie',
-    'folk', 'classical', 'reggae', 'latin', 'world', 'americana', 'alternative'
-  ];
-  for (const cat of categories) {
+  const normalized = genre.toLowerCase().trim();
+  for (const cat of GENRE_CATEGORIES) {
     if (normalized.includes(cat)) return cat;
   }
-  return normalized; // Return as-is if no category match
+  return null; // No matching category
+}
+
+// Extract all matching categories from a list of raw genres
+function extractGenreCategories(rawGenres) {
+  const categories = new Set();
+  for (const genre of rawGenres) {
+    const cat = getPrimaryGenreCategory(genre);
+    if (cat) {
+      categories.add(cat);
+    }
+  }
+  return Array.from(categories).sort();
 }
 
 // Build Ron's Radio - standalone feature
@@ -471,14 +481,14 @@ async function buildRonsRadio() {
 
     addLog(`Fetched genre data for ${artistMap.size} artists`);
 
-    // Collect all unique genres for future reference
-    const allGenres = new Set();
+    // Collect all unique genres and consolidate into categories
+    const allRawGenres = new Set();
     artistMap.forEach(artist => {
       if (artist && artist.genres) {
-        artist.genres.forEach(g => allGenres.add(g));
+        artist.genres.forEach(g => allRawGenres.add(g));
       }
     });
-    appState.ronsRadioAvailableGenres = Array.from(allGenres).sort();
+    appState.ronsRadioAvailableGenres = extractGenreCategories(Array.from(allRawGenres));
 
     // Check if genres are selected
     const selectedGenres = appState.ronsRadioSelectedGenres || [];
@@ -837,16 +847,18 @@ app.get('/rons-radio-genres', async (req, res) => {
       }
     }
 
-    // Group genres by primary category for easier selection
-    const genreList = Array.from(allGenres).sort();
+    // Consolidate into primary genre categories
+    const rawGenreList = Array.from(allGenres);
+    const consolidatedCategories = extractGenreCategories(rawGenreList);
 
-    // Save available genres to appState
-    appState.ronsRadioAvailableGenres = genreList;
+    // Save available genres to appState (consolidated)
+    appState.ronsRadioAvailableGenres = consolidatedCategories;
     await saveState();
 
     res.json({
       success: true,
-      genres: genreList,
+      genres: consolidatedCategories,
+      rawGenreCount: rawGenreList.length,
       selectedGenres: appState.ronsRadioSelectedGenres || [],
       playlistCount: bestOfPlaylists.length,
       artistCount: artistIdArray.length
