@@ -445,6 +445,7 @@
                             Sync Now
                         <% } %>
                     </button>
+                    <button class="btn" id="rons-radio-btn" style="background: #ff6b35; border-color: #ff6b35;">Build Ron's Radio</button>
                     <button class="btn danger" id="disconnect-btn">Disconnect All</button>
                 </div>
             </div>
@@ -692,6 +693,57 @@
                     location.reload();
                 } catch (error) {
                     alert('Disconnect failed: ' + error.message);
+                }
+            }
+        });
+
+        // Ron's Radio button handler
+        document.getElementById('rons-radio-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('rons-radio-btn');
+            const originalText = btn.innerHTML;
+
+            try {
+                btn.innerHTML = '<span class="loading"></span>Building...';
+                btn.disabled = true;
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+
+                const response = await fetch('/build-rons-radio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log("Ron's Radio result:", result);
+
+                if (result.success) {
+                    btn.innerHTML = "✅ Ron's Radio Built!";
+                    btn.style.background = '#1db954';
+                    showNotification(`Ron's Radio created with ${result.stats.finalTrackCount} tracks from ${result.stats.playlistsProcessed} playlists!`, 'success');
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    throw new Error(result.error || "Failed to build Ron's Radio");
+                }
+            } catch (error) {
+                console.error("Ron's Radio build failed:", error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.style.background = '#ff6b35';
+
+                if (error.name === 'AbortError') {
+                    showNotification("Ron's Radio build is taking longer than expected. Check the activity log.", 'error');
+                } else {
+                    showNotification("Ron's Radio failed: " + error.message, 'error');
                 }
             }
         });

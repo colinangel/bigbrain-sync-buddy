@@ -343,6 +343,181 @@ async function removeTracksFromPlaylist(token, playlistId, trackUris) {
   }
 }
 
+// Fetch multiple artists to get genre information (max 50 per request)
+async function fetchArtists(token, artistIds) {
+  if (artistIds.length === 0) return [];
+  const url = `https://api.spotify.com/v1/artists?ids=${artistIds.join(',')}`;
+  const data = await makeSpotifyRequest(url, token);
+  return data.artists;
+}
+
+// Check if an artist has country-related genres
+function isCountryArtist(artist) {
+  if (!artist || !artist.genres) return false;
+  const countryKeywords = ['country', 'americana', 'honky tonk', 'outlaw country', 'red dirt', 'bro-country'];
+  return artist.genres.some(genre =>
+    countryKeywords.some(keyword => genre.toLowerCase().includes(keyword))
+  );
+}
+
+// Build Ron's Radio - standalone feature
+// Collects tracks from all "Best Of" playlists, filters out country music by artist genre
+async function buildRonsRadio() {
+  if (!appState.sourceToken) {
+    addLog('Source account not connected', 'error');
+    return { success: false, error: 'Source account not connected' };
+  }
+
+  addLog("🎵 Starting Ron's Radio build...");
+
+  try {
+    await ensureValidToken('source');
+    const sourceProfile = await fetchUserProfile(appState.sourceToken);
+    addLog(`Source account verified: ${sourceProfile.display_name}`);
+
+    // Fetch all playlists from source
+    const allPlaylists = await fetchAllPlaylists(appState.sourceToken, appState.sourceUser.id);
+    addLog(`Found ${allPlaylists.length} total playlists`);
+
+    // Filter for playlists with "Best Of" in the title
+    const bestOfPlaylists = allPlaylists.filter(playlist => {
+      const name = playlist.name.toLowerCase();
+      return name.includes('best of');
+    });
+
+    addLog(`Found ${bestOfPlaylists.length} "Best Of" playlists to process`);
+
+    if (bestOfPlaylists.length === 0) {
+      addLog('No "Best Of" playlists found', 'warn');
+      return { success: false, error: 'No "Best Of" playlists found' };
+    }
+
+    // Collect all tracks and their artist IDs
+    const trackDataList = [];
+    const allArtistIds = new Set();
+    const playlistNames = [];
+
+    for (const playlist of bestOfPlaylists) {
+      try {
+        const tracks = await fetchPlaylistTracks(appState.sourceToken, playlist.id);
+        playlistNames.push(playlist.name);
+
+        for (const item of tracks) {
+          if (item.track && item.track.uri && item.track.artists) {
+            const artistIds = item.track.artists
+              .filter(a => a && a.id)
+              .map(a => a.id);
+
+            trackDataList.push({
+              uri: item.track.uri,
+              name: item.track.name,
+              artistIds: artistIds
+            });
+
+            artistIds.forEach(id => allArtistIds.add(id));
+          }
+        }
+
+        addLog(`Loaded ${tracks.length} tracks from "${playlist.name}"`);
+      } catch (error) {
+        addLog(`Error fetching tracks from "${playlist.name}": ${error.message}`, 'error');
+      }
+    }
+
+    addLog(`Total tracks to analyze: ${trackDataList.length}, unique artists: ${allArtistIds.size}`);
+
+    // Fetch all artist details in batches of 50 to get genre info
+    const artistIdArray = Array.from(allArtistIds);
+    const artistMap = new Map();
+
+    for (let i = 0; i < artistIdArray.length; i += 50) {
+      const batch = artistIdArray.slice(i, i + 50);
+      try {
+        const artists = await fetchArtists(appState.sourceToken, batch);
+        artists.forEach(artist => {
+          if (artist) {
+            artistMap.set(artist.id, artist);
+          }
+        });
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        addLog(`Error fetching artist batch: ${error.message}`, 'error');
+      }
+    }
+
+    addLog(`Fetched genre data for ${artistMap.size} artists`);
+
+    // Filter out tracks where ANY artist is a country artist
+    const nonCountryTracks = [];
+    let countryTracksFiltered = 0;
+
+    for (const trackData of trackDataList) {
+      const hasCountryArtist = trackData.artistIds.some(artistId => {
+        const artist = artistMap.get(artistId);
+        return isCountryArtist(artist);
+      });
+
+      if (!hasCountryArtist) {
+        nonCountryTracks.push(trackData.uri);
+      } else {
+        countryTracksFiltered++;
+      }
+    }
+
+    // Remove duplicates
+    const uniqueTrackUris = [...new Set(nonCountryTracks)];
+
+    addLog(`Filtered out ${countryTracksFiltered} country tracks, ${uniqueTrackUris.length} unique tracks remaining`);
+
+    if (uniqueTrackUris.length === 0) {
+      addLog('No non-country tracks found', 'warn');
+      return { success: false, error: 'No non-country tracks found after filtering' };
+    }
+
+    // Check if "Ron's Radio" playlist already exists
+    const ronsRadioName = "Ron's Radio";
+    let ronsRadioPlaylist = allPlaylists.find(p => p.name === ronsRadioName);
+
+    if (ronsRadioPlaylist) {
+      addLog(`Found existing "${ronsRadioName}" playlist, replacing tracks...`);
+      // Clear existing tracks
+      const existingTracks = await fetchPlaylistTracks(appState.sourceToken, ronsRadioPlaylist.id);
+      if (existingTracks.length > 0) {
+        const existingUris = existingTracks.map(t => t.track.uri);
+        await removeTracksFromPlaylist(appState.sourceToken, ronsRadioPlaylist.id, existingUris);
+      }
+      // Add new tracks
+      await addTracksToPlaylist(appState.sourceToken, ronsRadioPlaylist.id, uniqueTrackUris);
+    } else {
+      addLog(`Creating new "${ronsRadioName}" playlist...`);
+      const description = `Non-country tracks from Best Of playlists. Auto-generated by Sync Buddy.`;
+      ronsRadioPlaylist = await createPlaylist(
+        appState.sourceToken,
+        appState.sourceUser.id,
+        ronsRadioName,
+        description
+      );
+      await addTracksToPlaylist(appState.sourceToken, ronsRadioPlaylist.id, uniqueTrackUris);
+    }
+
+    addLog(`✅ Ron's Radio complete: ${uniqueTrackUris.length} tracks from ${bestOfPlaylists.length} playlists`);
+
+    return {
+      success: true,
+      stats: {
+        playlistsProcessed: bestOfPlaylists.length,
+        playlistNames: playlistNames,
+        totalTracksAnalyzed: trackDataList.length,
+        countryTracksFiltered: countryTracksFiltered,
+        finalTrackCount: uniqueTrackUris.length
+      }
+    };
+  } catch (error) {
+    addLog(`Ron's Radio build failed: ${error.message}`, 'error');
+    return { success: false, error: error.message };
+  }
+}
+
 async function performSync() {
   if (appState.syncInProgress) {
     addLog('Sync already in progress, skipping...', 'warn');
@@ -507,6 +682,15 @@ app.post('/sync', async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message || 'Unknown sync error' });
+  }
+});
+
+app.post('/build-rons-radio', async (req, res) => {
+  try {
+    const result = await buildRonsRadio();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || 'Unknown error building Ron\'s Radio' });
   }
 });
 
