@@ -497,7 +497,6 @@
                     </div>
                 </div>
 
-                <% if (appState.lastRonsRadioBuild) { %>
                 <div class="sync-stats" style="margin-bottom: 16px;">
                     <div class="stat">
                         <span class="stat-number"><%= appState.ronsRadioStats?.totalTracks || 0 %></span>
@@ -518,9 +517,12 @@
                 </div>
 
                 <div class="last-sync" style="margin-bottom: 16px;">
-                    Last build: <%= new Date(appState.lastRonsRadioBuild).toLocaleString() %>
+                    <% if (appState.lastRonsRadioBuild) { %>
+                        Last build: <%= new Date(appState.lastRonsRadioBuild).toLocaleString() %>
+                    <% } else { %>
+                        Never built
+                    <% } %>
                 </div>
-                <% } %>
 
                 <button class="btn" id="rons-radio-btn" style="background: #ff6b35; border-color: #ff6b35;">Build Ron's Radio</button>
             </div>
