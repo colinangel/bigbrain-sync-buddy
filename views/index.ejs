@@ -458,6 +458,32 @@
                     Creates a playlist on the source account with all non-country tracks from "Best Of" playlists.
                     This playlist will be synced to the destination automatically.
                 </p>
+
+                <% if (appState.lastRonsRadioBuild) { %>
+                <div class="sync-stats" style="margin-bottom: 16px;">
+                    <div class="stat">
+                        <span class="stat-number"><%= appState.ronsRadioStats?.totalTracks || 0 %></span>
+                        <div class="stat-label">Total Tracks</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number"><%= appState.ronsRadioStats?.playlistsProcessed || 0 %></span>
+                        <div class="stat-label">Best Of Playlists</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number"><%= appState.ronsRadioStats?.tracksAdded || 0 %></span>
+                        <div class="stat-label">Tracks Added</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number"><%= appState.ronsRadioStats?.tracksRemoved || 0 %></span>
+                        <div class="stat-label">Tracks Removed</div>
+                    </div>
+                </div>
+
+                <div class="last-sync" style="margin-bottom: 16px;">
+                    Last build: <%= new Date(appState.lastRonsRadioBuild).toLocaleString() %>
+                </div>
+                <% } %>
+
                 <button class="btn" id="rons-radio-btn" style="background: #ff6b35; border-color: #ff6b35;">Build Ron's Radio</button>
             </div>
         </div>

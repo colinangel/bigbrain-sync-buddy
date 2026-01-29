@@ -135,6 +135,8 @@ let appState = {
   lastSync: null,
   syncInProgress: false,
   syncInterval: parseInt(process.env.SYNC_INTERVAL_MINUTES, 10) || 30,
+  ronsRadioStats: { totalTracks: 0, tracksAdded: 0, tracksRemoved: 0, playlistsProcessed: 0 },
+  lastRonsRadioBuild: null,
   logs: []
 };
 
@@ -528,6 +530,16 @@ async function buildRonsRadio() {
     }
 
     addLog(`✅ Ron's Radio complete: ${uniqueTrackUris.length} total tracks, ${tracksAdded} added, ${tracksRemoved} removed`);
+
+    // Save Ron's Radio stats to appState
+    appState.ronsRadioStats = {
+      totalTracks: uniqueTrackUris.length,
+      tracksAdded: tracksAdded,
+      tracksRemoved: tracksRemoved,
+      playlistsProcessed: bestOfPlaylists.length
+    };
+    appState.lastRonsRadioBuild = new Date().toISOString();
+    await saveState();
 
     return {
       success: true,
