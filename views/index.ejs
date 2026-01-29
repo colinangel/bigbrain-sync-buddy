@@ -455,9 +455,47 @@
             <div style="text-align: center;">
                 <h3 style="margin-bottom: 8px; font-size: 18px;">Ron's Radio</h3>
                 <p style="font-size: 13px; opacity: 0.8; margin-bottom: 16px;">
-                    Creates a playlist on the source account with all non-country tracks from "Best Of" playlists.
+                    Creates a playlist on the source account from "Best Of" playlists filtered by selected genres.
                     This playlist will be synced to the destination automatically.
                 </p>
+
+                <!-- Genre Selection -->
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="font-size: 14px; margin: 0;">Select Genres to Include</h4>
+                        <button class="btn" id="scan-genres-btn" style="padding: 6px 12px; font-size: 12px;">Scan Genres</button>
+                    </div>
+
+                    <div id="genre-selection-container" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px;">
+                        <% if (appState.ronsRadioAvailableGenres && appState.ronsRadioAvailableGenres.length > 0) { %>
+                            <div id="genre-checkboxes" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <% appState.ronsRadioAvailableGenres.forEach(genre => { %>
+                                    <label style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                        <input type="checkbox" class="genre-checkbox" value="<%= genre %>"
+                                            <%= appState.ronsRadioSelectedGenres?.includes(genre) ? 'checked' : '' %>
+                                            style="cursor: pointer;">
+                                        <%= genre %>
+                                    </label>
+                                <% }); %>
+                            </div>
+                        <% } else { %>
+                            <p id="no-genres-message" style="text-align: center; opacity: 0.7; font-size: 13px; margin: 0;">
+                                Click "Scan Genres" to discover available genres from your Best Of playlists.
+                            </p>
+                        <% } %>
+                    </div>
+
+                    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="selected-genres-count" style="font-size: 12px; opacity: 0.7;">
+                            <%= appState.ronsRadioSelectedGenres?.length || 0 %> genres selected
+                        </span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn" id="select-all-genres-btn" style="padding: 4px 8px; font-size: 11px;">Select All</button>
+                            <button class="btn" id="clear-genres-btn" style="padding: 4px 8px; font-size: 11px;">Clear</button>
+                            <button class="btn primary" id="save-genres-btn" style="padding: 4px 8px; font-size: 11px;">Save Selection</button>
+                        </div>
+                    </div>
+                </div>
 
                 <% if (appState.lastRonsRadioBuild) { %>
                 <div class="sync-stats" style="margin-bottom: 16px;">
@@ -787,6 +825,96 @@
                 } else {
                     showNotification("Ron's Radio failed: " + error.message, 'error');
                 }
+            }
+        });
+
+        // Genre selection handlers
+        function updateSelectedGenresCount() {
+            const checkboxes = document.querySelectorAll('.genre-checkbox:checked');
+            const countEl = document.getElementById('selected-genres-count');
+            if (countEl) {
+                countEl.textContent = `${checkboxes.length} genres selected`;
+            }
+        }
+
+        // Update count when checkboxes change
+        document.querySelectorAll('.genre-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectedGenresCount);
+        });
+
+        // Scan Genres button
+        document.getElementById('scan-genres-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('scan-genres-btn');
+            const originalText = btn.innerHTML;
+
+            try {
+                btn.innerHTML = '<span class="loading"></span>Scanning...';
+                btn.disabled = true;
+
+                const response = await fetch('/rons-radio-genres');
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(`Found ${result.genres.length} genres from ${result.playlistCount} playlists`, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(result.error || 'Failed to scan genres');
+                }
+            } catch (error) {
+                console.error('Genre scan failed:', error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showNotification('Failed to scan genres: ' + error.message, 'error');
+            }
+        });
+
+        // Select All genres
+        document.getElementById('select-all-genres-btn')?.addEventListener('click', () => {
+            document.querySelectorAll('.genre-checkbox').forEach(cb => cb.checked = true);
+            updateSelectedGenresCount();
+        });
+
+        // Clear all genres
+        document.getElementById('clear-genres-btn')?.addEventListener('click', () => {
+            document.querySelectorAll('.genre-checkbox').forEach(cb => cb.checked = false);
+            updateSelectedGenresCount();
+        });
+
+        // Save selected genres
+        document.getElementById('save-genres-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('save-genres-btn');
+            const originalText = btn.innerHTML;
+
+            try {
+                btn.innerHTML = 'Saving...';
+                btn.disabled = true;
+
+                const selectedGenres = Array.from(document.querySelectorAll('.genre-checkbox:checked'))
+                    .map(cb => cb.value);
+
+                const response = await fetch('/rons-radio-genres', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ genres: selectedGenres })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(`Saved ${selectedGenres.length} genres`, 'success');
+                    btn.innerHTML = 'Saved!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 1500);
+                } else {
+                    throw new Error(result.error || 'Failed to save genres');
+                }
+            } catch (error) {
+                console.error('Failed to save genres:', error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showNotification('Failed to save genres: ' + error.message, 'error');
             }
         });
     </script>

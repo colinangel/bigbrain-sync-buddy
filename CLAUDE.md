@@ -106,7 +106,9 @@ powershell -Command "cd 'C:\bigbrain\bigbrain-sync-buddy'; git log --oneline -5"
 - `POST /sync` - Manual sync trigger
 - `POST /disconnect` - Clear all stored tokens and reset state
 - `POST /sync-interval` - Update sync interval (body: `{ interval: minutes }`, range 1-1440)
-- `POST /build-rons-radio` - Build "Ron's Radio" playlist on source account (collects tracks from all "Best Of" playlists, filters out country music by artist genre)
+- `POST /build-rons-radio` - Build "Ron's Radio" playlist on source account (collects tracks from all "Best Of" playlists, filters by selected genres)
+- `GET /rons-radio-genres` - Scan and return all genres found in "Best Of" playlists
+- `POST /rons-radio-genres` - Save selected genres (body: `{ genres: string[] }`)
 - `GET /status` - JSON status for UI polling
 - `GET /logs` - List available log files
 - `GET /logs/:filename` - Download specific log file
