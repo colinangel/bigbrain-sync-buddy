@@ -296,6 +296,29 @@ async function fetchUserProfile(token) {
   return await makeSpotifyRequest('https://api.spotify.com/v1/me', token);
 }
 
+// Search Spotify for a track by title and artist
+async function searchTrack(token, title, artist) {
+  const query = encodeURIComponent(`track:${title} artist:${artist}`);
+  const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`;
+  try {
+    const data = await makeSpotifyRequest(url, token);
+    if (data.tracks && data.tracks.items && data.tracks.items.length > 0) {
+      return data.tracks.items[0];
+    }
+    // Try a more relaxed search if exact match fails
+    const relaxedQuery = encodeURIComponent(`${title} ${artist}`);
+    const relaxedUrl = `https://api.spotify.com/v1/search?q=${relaxedQuery}&type=track&limit=1`;
+    const relaxedData = await makeSpotifyRequest(relaxedUrl, token);
+    if (relaxedData.tracks && relaxedData.tracks.items && relaxedData.tracks.items.length > 0) {
+      return relaxedData.tracks.items[0];
+    }
+    return null;
+  } catch (error) {
+    logger.error(`Error searching for track "${title}" by "${artist}": ${error.message}`);
+    return null;
+  }
+}
+
 async function fetchAllPlaylists(token, userId) {
   let playlists = [];
   let url = `https://api.spotify.com/v1/me/playlists?limit=50`;
@@ -886,6 +909,99 @@ app.post('/rons-radio-genres', async (req, res) => {
     res.json({ success: true, selectedGenres: genres });
   } catch (error) {
     logger.error('Error saving genres', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create a playlist from a list of songs
+app.post('/create-playlist-from-list', async (req, res) => {
+  if (!appState.sourceToken) {
+    return res.status(400).json({ success: false, error: 'Source account not connected' });
+  }
+
+  const { playlistName, songs } = req.body;
+
+  if (!playlistName || typeof playlistName !== 'string') {
+    return res.status(400).json({ success: false, error: 'playlistName is required' });
+  }
+
+  if (!songs || !Array.isArray(songs) || songs.length === 0) {
+    return res.status(400).json({ success: false, error: 'songs array is required' });
+  }
+
+  try {
+    await ensureValidToken('source');
+
+    addLog(`Creating playlist "${playlistName}" from ${songs.length} songs...`);
+
+    // Search for each track and collect URIs
+    const trackUris = [];
+    const notFound = [];
+    const found = [];
+
+    for (let i = 0; i < songs.length; i++) {
+      const song = songs[i];
+      const title = song.title || song.song || song.name;
+      const artist = song.artist;
+
+      if (!title) {
+        notFound.push({ index: i + 1, title: 'Unknown', artist: artist || 'Unknown', reason: 'No title provided' });
+        continue;
+      }
+
+      const track = await searchTrack(appState.sourceToken, title, artist || '');
+
+      if (track) {
+        trackUris.push(track.uri);
+        found.push({ title, artist, spotifyName: track.name, spotifyArtist: track.artists[0]?.name });
+      } else {
+        notFound.push({ index: i + 1, title, artist: artist || 'Unknown', reason: 'Not found on Spotify' });
+      }
+
+      // Rate limit protection - small delay between searches
+      if (i % 10 === 9) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    addLog(`Found ${found.length} tracks, ${notFound.length} not found`);
+
+    if (trackUris.length === 0) {
+      return res.json({
+        success: false,
+        error: 'No tracks found on Spotify',
+        notFound
+      });
+    }
+
+    // Create the playlist
+    const description = `Created by Sync Buddy from a list of ${songs.length} songs.`;
+    const playlist = await createPlaylist(
+      appState.sourceToken,
+      appState.sourceUser.id,
+      playlistName,
+      description
+    );
+
+    // Add tracks to the playlist
+    await addTracksToPlaylist(appState.sourceToken, playlist.id, trackUris);
+
+    addLog(`✅ Created playlist "${playlistName}" with ${trackUris.length} tracks`);
+
+    res.json({
+      success: true,
+      playlistName,
+      playlistId: playlist.id,
+      playlistUrl: playlist.external_urls?.spotify,
+      stats: {
+        totalSongs: songs.length,
+        found: found.length,
+        notFound: notFound.length
+      },
+      notFoundSongs: notFound
+    });
+  } catch (error) {
+    addLog(`Failed to create playlist: ${error.message}`, 'error');
     res.status(500).json({ success: false, error: error.message });
   }
 });

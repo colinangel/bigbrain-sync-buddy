@@ -527,6 +527,35 @@
                 <button class="btn" id="rons-radio-btn" style="background: #ff6b35; border-color: #ff6b35;">Build Ron's Radio</button>
             </div>
         </div>
+
+        <!-- Create Playlist from Song List Section -->
+        <div class="card">
+            <div style="text-align: center;">
+                <h3 style="margin-bottom: 8px; font-size: 18px;">Create Playlist from Song List</h3>
+                <p style="font-size: 13px; opacity: 0.8; margin-bottom: 16px;">
+                    Paste a list of songs (one per line, format: "Song Title - Artist") to create a new playlist on the source account.
+                </p>
+
+                <div style="text-align: left; margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 14px;">Playlist Name:</label>
+                    <input type="text" id="new-playlist-name" placeholder="e.g., Best of Swing"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 14px; box-sizing: border-box;">
+                </div>
+
+                <div style="text-align: left; margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 14px;">Song List (one per line: "Song Title - Artist"):</label>
+                    <textarea id="song-list-input" rows="10" placeholder="Sing, Sing, Sing - Benny Goodman
+In the Mood - Glenn Miller
+Take the 'A' Train - Duke Ellington"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 13px; font-family: monospace; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+
+                <div id="playlist-creation-results" style="display: none; text-align: left; margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                </div>
+
+                <button class="btn primary" id="create-playlist-btn">Create Playlist</button>
+            </div>
+        </div>
         <% } %>
 
         <% if (appState.logs && appState.logs.length > 0) { %>
@@ -917,6 +946,100 @@
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 showNotification('Failed to save genres: ' + error.message, 'error');
+            }
+        });
+
+        // Create Playlist from Song List handler
+        document.getElementById('create-playlist-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('create-playlist-btn');
+            const originalText = btn.innerHTML;
+            const resultsDiv = document.getElementById('playlist-creation-results');
+
+            const playlistName = document.getElementById('new-playlist-name')?.value?.trim();
+            const songListText = document.getElementById('song-list-input')?.value?.trim();
+
+            if (!playlistName) {
+                showNotification('Please enter a playlist name', 'error');
+                return;
+            }
+
+            if (!songListText) {
+                showNotification('Please enter a song list', 'error');
+                return;
+            }
+
+            // Parse the song list
+            const lines = songListText.split('\n').filter(line => line.trim());
+            const songs = lines.map(line => {
+                // Try to parse "Title - Artist" format
+                const parts = line.split(' - ');
+                if (parts.length >= 2) {
+                    return { title: parts[0].trim(), artist: parts.slice(1).join(' - ').trim() };
+                }
+                // Try "Title by Artist" format
+                const byParts = line.split(' by ');
+                if (byParts.length >= 2) {
+                    return { title: byParts[0].trim(), artist: byParts.slice(1).join(' by ').trim() };
+                }
+                // Just use the whole line as title
+                return { title: line.trim(), artist: '' };
+            });
+
+            if (songs.length === 0) {
+                showNotification('No songs found in the list', 'error');
+                return;
+            }
+
+            try {
+                btn.innerHTML = `<span class="loading"></span>Creating... (${songs.length} songs)`;
+                btn.disabled = true;
+                resultsDiv.style.display = 'none';
+
+                const response = await fetch('/create-playlist-from-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playlistName, songs })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    btn.innerHTML = '✅ Playlist Created!';
+                    btn.style.background = '#1db954';
+
+                    let resultsHtml = `<strong>Playlist created successfully!</strong><br>`;
+                    resultsHtml += `Found ${result.stats.found} of ${result.stats.totalSongs} songs<br>`;
+                    if (result.playlistUrl) {
+                        resultsHtml += `<a href="${result.playlistUrl}" target="_blank" style="color: #1db954;">Open in Spotify</a><br>`;
+                    }
+
+                    if (result.notFoundSongs && result.notFoundSongs.length > 0) {
+                        resultsHtml += `<br><strong>Not found (${result.notFoundSongs.length}):</strong><br>`;
+                        resultsHtml += '<div style="max-height: 150px; overflow-y: auto; font-size: 12px; margin-top: 8px;">';
+                        result.notFoundSongs.forEach(song => {
+                            resultsHtml += `• ${song.title} - ${song.artist}<br>`;
+                        });
+                        resultsHtml += '</div>';
+                    }
+
+                    resultsDiv.innerHTML = resultsHtml;
+                    resultsDiv.style.display = 'block';
+
+                    showNotification(`Created "${playlistName}" with ${result.stats.found} tracks!`, 'success');
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        btn.style.background = '';
+                    }, 3000);
+                } else {
+                    throw new Error(result.error || 'Failed to create playlist');
+                }
+            } catch (error) {
+                console.error('Playlist creation failed:', error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showNotification('Failed to create playlist: ' + error.message, 'error');
             }
         });
     </script>
