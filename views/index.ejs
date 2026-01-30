@@ -968,21 +968,24 @@ Take the 'A' Train - Duke Ellington"
                 return;
             }
 
-            // Parse the song list
-            const lines = songListText.split('\n').filter(line => line.trim());
+            // Parse the song list - handle all line ending formats (CR, LF, CRLF)
+            const normalizedText = songListText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const lines = normalizedText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const songs = lines.map(line => {
+                // Clean up any extra whitespace
+                const cleanLine = line.replace(/\s+/g, ' ').trim();
                 // Try to parse "Title - Artist" format
-                const parts = line.split(' - ');
+                const parts = cleanLine.split(' - ');
                 if (parts.length >= 2) {
                     return { title: parts[0].trim(), artist: parts.slice(1).join(' - ').trim() };
                 }
                 // Try "Title by Artist" format
-                const byParts = line.split(' by ');
+                const byParts = cleanLine.split(' by ');
                 if (byParts.length >= 2) {
                     return { title: byParts[0].trim(), artist: byParts.slice(1).join(' by ').trim() };
                 }
                 // Just use the whole line as title
-                return { title: line.trim(), artist: '' };
+                return { title: cleanLine, artist: '' };
             });
 
             if (songs.length === 0) {
