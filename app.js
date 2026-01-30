@@ -370,6 +370,11 @@ async function removeTracksFromPlaylist(token, playlistId, trackUris) {
   }
 }
 
+async function unfollowPlaylist(token, playlistId) {
+  const url = `https://api.spotify.com/v1/playlists/${playlistId}/followers`;
+  await makeSpotifyRequest(url, token, 'DELETE');
+}
+
 // Fetch multiple artists to get genre information (max 50 per request)
 async function fetchArtists(token, artistIds) {
   if (artistIds.length === 0) return [];
@@ -711,11 +716,28 @@ async function performSync() {
       }
     }
 
-    appState.syncStats = { playlists: syncedPlaylists, tracks: totalTracks, newPlaylists, newTracks, removedTracks };
+    // Delete playlists on destination that no longer exist on source
+    const sourcePlaylistNames = new Set(sourcePlaylists.map(p => p.name.trim().toLowerCase()));
+    let deletedPlaylists = 0;
+
+    for (const destPlaylist of destPlaylists) {
+      const normalizedName = destPlaylist.name.trim().toLowerCase();
+      if (!sourcePlaylistNames.has(normalizedName)) {
+        try {
+          await unfollowPlaylist(appState.destToken, destPlaylist.id);
+          addLog(`Deleted playlist: ${destPlaylist.name}`);
+          deletedPlaylists++;
+        } catch (e) {
+          addLog(`Error deleting playlist ${destPlaylist.name}: ${e.message}`, 'error');
+        }
+      }
+    }
+
+    appState.syncStats = { playlists: syncedPlaylists, tracks: totalTracks, newPlaylists, newTracks, removedTracks, deletedPlaylists };
     appState.lastSync = new Date().toISOString();
     await saveState();
 
-    addLog(`Sync completed: ${syncedPlaylists} playlists, ${totalTracks} tracks, ${newTracks} added, ${removedTracks} removed`);
+    addLog(`Sync completed: ${syncedPlaylists} playlists, ${totalTracks} tracks, ${newTracks} added, ${removedTracks} removed, ${deletedPlaylists} playlists deleted`);
     return { success: true, stats: appState.syncStats };
   } catch (error) {
     addLog(`Sync failed: ${error.message}`, 'error');
