@@ -411,7 +411,7 @@
 
                 <div class="last-sync">
                     <% if (appState.lastSync) { %>
-                        Last sync: <%= new Date(appState.lastSync).toLocaleString() %>
+                        Last sync: <span class="local-time" data-utc="<%= appState.lastSync %>"></span>
                     <% } else { %>
                         Never synced
                     <% } %>
@@ -522,7 +522,7 @@
 
                 <div class="last-sync" style="margin-bottom: 16px;">
                     <% if (appState.lastRonsRadioBuild) { %>
-                        Last build: <%= new Date(appState.lastRonsRadioBuild).toLocaleString() %>
+                        Last build: <span class="local-time" data-utc="<%= appState.lastRonsRadioBuild %>"></span>
                     <% } else { %>
                         Never built
                     <% } %>
@@ -583,7 +583,7 @@ Or upload a file above to auto-populate this field."
             <div class="logs-section">
                 <% appState.logs.slice(0, 20).forEach(log => { %>
                     <div class="log-entry">
-                        <span class="log-time"><%= new Date(log.timestamp).toLocaleTimeString() %></span>
+                        <span class="log-time local-time" data-utc="<%= log.timestamp %>" data-time-only="true"></span>
                         <span class="log-type <%= log.type %>"><%= log.type.toUpperCase() %></span>
                         <span class="log-message"><%= log.message %></span>
                     </div>
@@ -618,6 +618,17 @@ Or upload a file above to auto-populate this field."
                 notification.remove();
             }, 4000);
         }
+        // Convert UTC timestamps to local time
+        document.querySelectorAll('.local-time[data-utc]').forEach(el => {
+            const utc = el.getAttribute('data-utc');
+            if (utc) {
+                const date = new Date(utc);
+                el.textContent = el.getAttribute('data-time-only') === 'true'
+                    ? date.toLocaleTimeString()
+                    : date.toLocaleString();
+            }
+        });
+
         // Initialize interval controls
         function initializeIntervalControls() {
             const currentInterval = <%= appState.syncInterval || 30 %>;

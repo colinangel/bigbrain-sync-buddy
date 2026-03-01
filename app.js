@@ -3,7 +3,8 @@
 const express = require('express');
 const axios = require('axios');
 const cron = require('node-cron');
-const fs = require('fs').promises;
+const fsSync = require('fs');
+const fs = fsSync.promises;
 const path = require('path');
 const winston = require('winston');
 require('winston-daily-rotate-file');
@@ -20,7 +21,7 @@ if (majorVersion < 16) {
   console.error('Please upgrade to a supported version: https://nodejs.org/');
   process.exit(1);
 }
-if (majorVersion === 20) {
+if (majorVersion >= 16 && majorVersion < 20) {
   console.warn(`⚠️ Node.js ${nodeVersion} detected. For best performance, upgrade to Node.js 20+`);
 }
 console.log(`✅ Node.js ${nodeVersion} - Compatible`);
@@ -327,7 +328,7 @@ async function fetchAllPlaylists(token, userId) {
     playlists = playlists.concat(data.items);
     url = data.next;
   }
-  return playlists.filter(p => p.owner.id === userId);
+  return playlists.filter(p => p && p.owner && p.owner.id === userId);
 }
 
 async function fetchPlaylistTracks(token, playlistId) {
@@ -1136,7 +1137,7 @@ app.get('/logs/:filename', async (req, res) => {
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Length', stats.size);
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    fs.createReadStream(logPath).pipe(res);
+    fsSync.createReadStream(logPath).pipe(res);
   } catch (error) {
     if (error.code === 'ENOENT') {
       res.status(404).json({ error: 'Log file not found' });
