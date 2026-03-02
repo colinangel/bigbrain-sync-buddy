@@ -3,7 +3,10 @@
 ## Current Position
 - **Version:** 1.2.19
 - **Status:** Stable, running in production on SHELBY
-- **Last Session:** 2026-03-01 — Synced latest codebase from `repo/` to root, fixed startup config
+- **Roadmap:** `docs/ROADMAP.md` — Phases 0-4 complete, Phase 5 next
+- **Next Step:** 5.1 — Rate-limit retry with backoff
+- **Last Session:** 2026-03-01 — Built retroactive roadmap, gitignored release artifacts
+- **Key Context:** Roadmap built from full codebase analysis. Phases 0-4 document all existing features. Phases 5-8 propose hardening, modularization, testing, and new features.
 
 ## Environment
 - **SHELBY** (this machine): Windows 11, Node.js 24.x, development & runtime
@@ -11,7 +14,7 @@
 - **LAN sync**: Both machines on same network — can synchronize best-practice files (`.claude/settings.local.json`, `.env`, etc.) even if gitignored
 - **Spotify Dashboard**: Redirect URI whitelisted for `http://127.0.0.1:3000/callback` only
 - **Startup**: `Spotify.bat` on Desktop runs `npm start` from `C:\BigBrain\bigbrain-sync-buddy`
-- **Git repo**: Lives in `repo/` subdirectory; root is the runtime copy
+- **Git repo**: Project root IS the git repo (consolidated 2026-03-01)
 
 ## Key Architectural Decisions
 - **No database** (2025-06): State stored in-memory with `app-data.json` file persistence
@@ -23,7 +26,7 @@
 
 ## Known Gotchas
 - **Nodemon restart loop**: Must have `nodemon.json` at root ignoring `app-data.json` — otherwise infinite restarts on startup
-- **Dual code locations**: `repo/` has the git-tracked code; root has the runtime copy. After `git pull` in `repo/`, must copy files to root
+- **Former dual code locations**: Previously `repo/` had git-tracked code and root was runtime copy. Consolidated 2026-03-01 — root is now the single git repo
 - **Spotify redirect URI**: Changing HOST requires updating both `.env` AND the Spotify Developer Dashboard
 - **Stale processes**: Always check for existing Node processes on port 3000 before starting (`netstat -ano | grep :3000`)
 - **fs.createReadStream**: Use `fsSync` (not async `fs`) for stream operations (fixed in v1.2.19)

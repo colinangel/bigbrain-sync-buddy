@@ -61,6 +61,11 @@ Thumbs.db
 .rts2_cache_es/
 .rts2_cache_umd/
 
+# Release artifacts (local-only)
+*.docx
+release.ps1
+_Achive/
+
 # Misc
 .node_repl_history
 .grunt/
