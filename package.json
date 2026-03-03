@@ -11,7 +11,8 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "prestart": "node --version && npm --version",
-    "test": "node --check app.js"
+    "test": "node --check app.js",
+    "lint": "eslint ."
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -23,6 +24,9 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.0.2",
+    "globals": "17.4.0",
     "nodemon": "^3.1.9"
   },
   "keywords": [

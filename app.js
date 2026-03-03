@@ -286,10 +286,10 @@ async function makeSpotifyRequest(url, token, method = 'GET', data = null) {
   } catch (error) {
     const status = error.response?.status;
     logger.error(`Spotify API request failed: ${url} ${method} ${status} - ${error.message}`);
-    if (status === 401) throw new Error('Token expired - please re-authenticate');
-    if (status === 403) throw new Error('Access forbidden - check app permissions');
-    if (status === 429) throw new Error('Rate limited - too many requests');
-    throw new Error(`Spotify API error ${status} - ${error.message}`);
+    if (status === 401) throw new Error('Token expired - please re-authenticate', { cause: error });
+    if (status === 403) throw new Error('Access forbidden - check app permissions', { cause: error });
+    if (status === 429) throw new Error('Rate limited - too many requests', { cause: error });
+    throw new Error(`Spotify API error ${status} - ${error.message}`, { cause: error });
   }
 }
 
