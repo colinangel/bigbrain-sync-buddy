@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*)"
+      "Bash(tasklist:*)",
+      "Bash(npm run:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm start:*)",
+      "Bash(wc:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)"
     ]
   }
 }
